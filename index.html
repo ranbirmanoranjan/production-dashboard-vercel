@@ -258,15 +258,26 @@ footer{text-align:center;font-size:11px;color:var(--text3);font-family:'JetBrain
   </div>
 </div>
 
-<div class="panel"><div class="panel-title"><i class="ti ti-chart-bar"></i> Monthly trend</div>
-    <div class="tabs" id="trend-tabs">
-      <div class="tab active" onclick="switchTrend('work',this)">Working Mins</div>
-      <div class="tab" onclick="switchTrend('ot',this)">OT mins</div>
-      <div class="tab" onclick="switchTrend('actual',this)">Actual Mins</div>
-      <div class="tab" onclick="switchTrend('avg',this)">Avg/day</div>
+<div class="panel" id="daily-trend-panel">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+    <div class="panel-title" style="margin-bottom:0"><i class="ti ti-trending-up"></i> Daily Avg Mins / Day</div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span id="dt-range-lbl" style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace"></span>
+      <div class="tabs" id="dt-style-tabs" style="margin-bottom:0">
+        <div class="tab active" id="dt-curve-tab" onclick="switchDTStyle('curve',this)"><i class="ti ti-wave-sine" style="font-size:12px"></i> Curve</div>
+        <div class="tab" id="dt-bar-tab" onclick="switchDTStyle('bar',this)"><i class="ti ti-chart-bar" style="font-size:12px"></i> Bar</div>
+      </div>
     </div>
-    <div class="chart-wrap" style="height:210px"><canvas id="trendChart"></canvas></div>
   </div>
+  <div style="position:relative">
+    <div class="chart-wrap" style="height:240px"><canvas id="trendChart"></canvas></div>
+    <div id="dt-tooltip" style="display:none;position:absolute;pointer-events:none;background:var(--card);border:1px solid var(--border2);border-radius:var(--rad-lg);padding:10px 13px;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,0.25);min-width:200px;z-index:50"></div>
+  </div>
+  <div style="margin-top:10px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)"><span style="display:inline-block;width:24px;height:3px;background:#667eea;border-radius:2px"></span> Avg Mins/Day</div>
+    <div id="dt-summary" style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-left:auto"></div>
+  </div>
+</div>
 <div class="grid-2">
   <div class="panel"><div class="panel-title"><i class="ti ti-layout-columns"></i> By shift %</div><div class="chart-wrap" style="height:210px"><canvas id="shiftChart"></canvas></div></div>
   <div class="panel"><div class="panel-title"><i class="ti ti-users"></i> By shift TL</div>
@@ -612,19 +623,121 @@ function updateHighlights(){
 var PAL=['#667eea','#ff6b35','#10b981','#f59e0b','#a855f7','#3b82f6','#ef4444','#06b6d4','#84cc16','#ec4899'];
 function mkChart(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id),cfg);}
 function scaleOpts(){return{ticks:{font:{size:10,family:"'JetBrains Mono',monospace"},color:textColor()},grid:{color:gridColor()}};}
-function switchTrend(m,el){trendM=m;document.querySelectorAll('#trend-tabs .tab').forEach(function(t){t.classList.remove('active');});el.classList.add('active');updateTrend();}
+var dtStyle='curve';
+function switchDTStyle(s,el){dtStyle=s;document.querySelectorAll('#dt-style-tabs .tab').forEach(function(t){t.classList.remove('active');});el.classList.add('active');updateTrend();}
 function switchEmp(m,el){empM=m;document.querySelectorAll('#emp-tabs .tab').forEach(function(t){t.classList.remove('active');});el.classList.add('active');updateEmpChart();}
 
 function updateTrend(){
-  var grp=groupBy(raw,function(r){return monthLabel(rowDate(r));});
-  var mos=sortMonths(Object.keys(grp));
-  var fns={
-    work:function(rows){return Math.round(sumF(rows.filter(function(r){return rowTotNoOT(r)>0;}),rowTotNoOT));},
-    ot:function(rows){return Math.round(sumF(rows,rowOTMins));},
-    actual:function(rows){return Math.round(sumF(rows,rowActMins));},
-    avg:function(rows){var w=rows.filter(function(r){return rowTotNoOT(r)>0;});return w.length?Math.round(sumF(w,rowTotNoOT)/w.length):0;}
-  };
-  mkChart('trendChart',{type:'bar',data:{labels:mos,datasets:[{data:mos.map(function(m){return fns[trendM](grp[m]);}),backgroundColor:'#667eea',borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:true,anchor:'end',align:'end',color:isDark()?'#ffffff':'#222222',font:{size:10,weight:'bold'},formatter:function(v){return fmtK(v);}}},scales:{x:Object.assign({ticks:{autoSkip:false,maxRotation:30}},scaleOpts()),y:Object.assign({ticks:{callback:function(v){return fmtK(v);}}},scaleOpts())}}});
+  // Group filtered rows by date
+  var grp=groupBy(filtered,rowDate);
+  var dates=Object.keys(grp).filter(Boolean).sort();
+  if(!dates.length)return;
+
+  // Compute avg mins/day per date (only working rows)
+  var vals=dates.map(function(d){
+    var w=grp[d].filter(function(r){return rowTotNoOT(r)>0;});
+    return w.length?Math.round(sumF(w,rowTotNoOT)/w.length):0;
+  });
+
+  // Build per-date top-3 employee breakdown for tooltips
+  var top3=dates.map(function(d){
+    var empGrp=groupBy(grp[d],rowName);
+    return Object.keys(empGrp).map(function(nm){
+      var w=empGrp[nm].filter(function(r){return rowTotNoOT(r)>0;});
+      return{name:nm,avg:w.length?Math.round(sumF(w,rowTotNoOT)/w.length):0};
+    }).filter(function(e){return e.avg>0;}).sort(function(a,b){return b.avg-a.avg;}).slice(0,3);
+  });
+
+  // Update header label
+  var lbl=document.getElementById('dt-range-lbl');
+  if(lbl){var span=dates.length+' data point'+(dates.length!==1?'s':'');lbl.textContent=dates[0]+' · '+dates[dates.length-1]+' · '+span;}
+
+  // Summary stats
+  var nonZero=vals.filter(function(v){return v>0;});
+  var sm=document.getElementById('dt-summary');
+  if(sm&&nonZero.length){
+    var mn=Math.min.apply(null,nonZero),mx=Math.max.apply(null,nonZero),av=Math.round(nonZero.reduce(function(a,b){return a+b;},0)/nonZero.length);
+    sm.textContent='Min: '+mn+' · Max: '+mx+' · Avg: '+av+' mins/day';
+  }
+
+  // Short date labels for x-axis  
+  var shortLabels=dates.map(function(d){
+    var m=d.match(/^(\d{2})-([A-Za-z]{3})-(\d{2})$/);
+    return m?m[2]+' '+parseInt(m[1]):d;
+  });
+
+  var isCurve=dtStyle==='curve';
+  mkChart('trendChart',{
+    type: isCurve?'line':'bar',
+    data:{
+      labels:shortLabels,
+      datasets:[{
+        data:vals,
+        borderColor:'#667eea',
+        backgroundColor: isCurve?'rgba(102,126,234,0.12)':'rgba(102,126,234,0.75)',
+        borderWidth: isCurve?2.5:0,
+        borderRadius: isCurve?0:4,
+        borderSkipped: false,
+        fill: isCurve,
+        tension: isCurve?0.4:0,
+        pointBackgroundColor:'#667eea',
+        pointRadius: isCurve?(dates.length>60?0:3):0,
+        pointHoverRadius:5,
+        pointBorderWidth:0
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        datalabels:{display: dates.length<=14,anchor:'end',align: isCurve?'top':'end',color:isDark()?'#ffffff':'#222222',font:{size:10,weight:'bold'},formatter:function(v){return v?v:''}},
+        tooltip:{
+          enabled:false,
+          external:function(ctx){
+            var tooltip=ctx.tooltip;
+            var el=document.getElementById('dt-tooltip');
+            if(!el)return;
+            if(tooltip.opacity===0){el.style.display='none';return;}
+            var idx=tooltip.dataPoints[0].dataIndex;
+            var date=dates[idx];
+            var val=vals[idx];
+            var empRows=grp[date]||[];
+            var present=empRows.filter(function(r){return rowTotNoOT(r)>0;});
+            var html='<div style="font-weight:700;color:var(--text);margin-bottom:6px;font-size:13px">'+shortLabels[idx]+'</div>';
+            html+='<div style="color:#667eea;margin-bottom:6px"><span style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700">'+val+'</span> <span style="font-size:11px;color:var(--text3)">avg mins/day</span></div>';
+            html+='<div style="font-size:11px;color:var(--text3);margin-bottom:6px">'+present.length+' employee'+(present.length!==1?'s':'')+' present · '+empRows.length+' records</div>';
+            var t3=top3[idx];
+            if(t3&&t3.length){
+              html+='<div style="border-top:1px solid var(--border);padding-top:6px;margin-top:2px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:5px">Top employees</div>';
+              t3.forEach(function(e,i){
+                var colors=['#f59e0b','#a0a0b0','#cd7f32'];
+                html+='<div style="display:flex;justify-content:space-between;gap:16px;margin-bottom:3px"><span style="color:'+colors[i]+';font-size:11px">'+e.name+'</span><span style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--text)">'+e.avg+' mins</span></div>';
+              });
+              html+='</div>';
+            }
+            el.innerHTML=html;
+            var chart=ctx.chart;
+            var pos=chart.canvas.getBoundingClientRect();
+            var wrap=chart.canvas.parentNode;
+            var wrapRect=wrap.getBoundingClientRect();
+            var x=tooltip.caretX;
+            var y=tooltip.caretY;
+            el.style.display='block';
+            var elW=el.offsetWidth||220;
+            var left=x+12;
+            if(left+elW>wrapRect.width)left=x-elW-12;
+            el.style.left=left+'px';
+            el.style.top=Math.max(0,y-40)+'px';
+          }
+        }
+      },
+      scales:{
+        x:Object.assign({ticks:{autoSkip:true,maxTicksLimit:dates.length>90?12:dates.length>30?8:dates.length,maxRotation:30,font:{size:10}}},scaleOpts()),
+        y:Object.assign({ticks:{callback:function(v){return v;},font:{size:10}}},scaleOpts())
+      }
+    }
+  });
 }
 function updateTLChart(){
   var grp=groupBy(filtered,rowTL);var labels=Object.keys(grp);if(!labels.length)return;
