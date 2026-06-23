@@ -267,6 +267,9 @@ footer{text-align:center;font-size:11px;color:var(--text3);font-family:'JetBrain
         <div class="tab active" id="dt-curve-tab" onclick="switchDTStyle('curve',this)"><i class="ti ti-wave-sine" style="font-size:12px"></i> Curve</div>
         <div class="tab" id="dt-bar-tab" onclick="switchDTStyle('bar',this)"><i class="ti ti-chart-bar" style="font-size:12px"></i> Bar</div>
       </div>
+      <div class="tabs" id="dt-val-tabs" style="margin-bottom:0">
+        <div class="tab active" id="dt-val-tab" onclick="toggleDTValues(this)"><i class="ti ti-numbers" style="font-size:12px"></i> Values</div>
+      </div>
     </div>
   </div>
   <div style="position:relative">
@@ -624,6 +627,8 @@ var PAL=['#667eea','#ff6b35','#10b981','#f59e0b','#a855f7','#3b82f6','#ef4444','
 function mkChart(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id),cfg);}
 function scaleOpts(){return{ticks:{font:{size:10,family:"'JetBrains Mono',monospace"},color:textColor()},grid:{color:gridColor()}};}
 var dtStyle='curve';
+var dtShowValues=true;
+function toggleDTValues(el){dtShowValues=!dtShowValues;el.classList.toggle('active',dtShowValues);updateTrend();}
 function switchDTStyle(s,el){dtStyle=s;document.querySelectorAll('#dt-style-tabs .tab').forEach(function(t){t.classList.remove('active');});el.classList.add('active');updateTrend();}
 function switchEmp(m,el){empM=m;document.querySelectorAll('#emp-tabs .tab').forEach(function(t){t.classList.remove('active');});el.classList.add('active');updateEmpChart();}
 
@@ -688,10 +693,11 @@ function updateTrend(){
     },
     options:{
       responsive:true,maintainAspectRatio:false,
+      layout:{padding:{top:25,right:10,left:5}},
       interaction:{mode:'index',intersect:false},
       plugins:{
         legend:{display:false},
-        datalabels:{display: dates.length<=14,anchor:'end',align: isCurve?'top':'end',color:isDark()?'#ffffff':'#222222',font:{size:10,weight:'bold'},formatter:function(v){return v?v:''}},
+        datalabels:{display:dtShowValues,anchor:'end',align:isCurve?'top':'end',clamp:true,clip:false,color:isDark()?'#ffffff':'#222222',font:{size:10,weight:'bold'},formatter:function(v){return v?String(v):''}},
         tooltip:{
           enabled:false,
           external:function(ctx){
