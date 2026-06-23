@@ -779,6 +779,154 @@ function closePanel(){
 Chart.defaults.font.family="'JetBrains Mono',monospace";
 Chart.defaults.color=textColor();
 Chart.defaults.borderColor=gridColor();
+// ── DATE RANGE PICKER ────────────────────────────────────────────────────────
+var drpState={mode:'last30',start:null,end:null,picking:0,calYear:null,calMonth:null,pendStart:null,pendEnd:null};
+var MONTH_FULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function drpToday(){return new Date(new Date().setHours(0,0,0,0));}
+function drpFmt(d){if(!d)return'';return String(d.getDate()).padStart(2,'0')+'-'+MONTH_NAMES[d.getMonth()]+'-'+String(d.getFullYear()).slice(2);}
+function drpFromStr(s){if(!s)return null;var m=s.match(/^(\d{2})-([A-Za-z]{3})-(\d{2})$/);if(!m)return null;var mo=MONTH_NAMES.indexOf(m[2].charAt(0).toUpperCase()+m[2].slice(1).toLowerCase());if(mo<0)return null;return new Date(2000+parseInt(m[3]),mo,parseInt(m[1]));}
+function drpSameDay(a,b){return a&&b&&a.toDateString()===b.toDateString();}
+
+function toggleDRP(e){e.stopPropagation();var p=document.getElementById('drp-popup');if(p.classList.contains('open')){closeDRP();}else{openDRP();}}
+function openDRP(){
+  var today=drpToday();
+  drpState.calYear=drpState.pendStart?drpState.pendStart.getFullYear():today.getFullYear();
+  drpState.calMonth=drpState.pendStart?drpState.pendStart.getMonth():today.getMonth();
+  drpState.picking=0;
+  renderDRPCal();
+  updateDRPSelDisplay();
+  document.getElementById('drp-popup').classList.add('open');
+}
+function closeDRP(){document.getElementById('drp-popup').classList.remove('open');}
+
+document.addEventListener('click',function(e){
+  var popup=document.getElementById('drp-popup');
+  var btn=document.getElementById('dr-btn');
+  if(popup&&popup.classList.contains('open')&&!popup.contains(e.target)&&!btn.contains(e.target))closeDRP();
+});
+
+function setQuick(q){
+  var today=drpToday();
+  var s,en;
+  document.querySelectorAll('.drp-opt').forEach(function(el){el.classList.remove('active');});
+  event.target.classList.add('active');
+  drpState.mode=q;
+  if(q==='today'){s=new Date(today);en=new Date(today);}
+  else if(q==='yesterday'){s=new Date(today);s.setDate(s.getDate()-1);en=new Date(s);}
+  else if(q==='last7'){en=new Date(today);s=new Date(today);s.setDate(s.getDate()-6);}
+  else if(q==='last30'){en=new Date(today);s=new Date(today);s.setDate(s.getDate()-29);}
+  else if(q==='thismonth'){s=new Date(today.getFullYear(),today.getMonth(),1);en=new Date(today);}
+  else if(q==='lastmonth'){var lm=new Date(today.getFullYear(),today.getMonth()-1,1);s=lm;en=new Date(today.getFullYear(),today.getMonth(),0);}
+  else if(q==='last3months'){en=new Date(today);s=new Date(today);s.setMonth(s.getMonth()-3);s.setDate(s.getDate()+1);}
+  else if(q==='last6months'){en=new Date(today);s=new Date(today);s.setMonth(s.getMonth()-6);s.setDate(s.getDate()+1);}
+  else if(q==='thisyear'){s=new Date(today.getFullYear(),0,1);en=new Date(today);}
+  else if(q==='alltime'){s=null;en=null;}
+  else if(q==='custom'){drpState.pendStart=null;drpState.pendEnd=null;drpState.picking=1;updateDRPSelDisplay();renderDRPCal();return;}
+  drpState.pendStart=s;drpState.pendEnd=en;
+  updateDRPSelDisplay();renderDRPCal();
+  if(q!=='custom')applyDRP();
+}
+
+function drpNav(dir){
+  drpState.calMonth+=dir;
+  if(drpState.calMonth>11){drpState.calMonth=0;drpState.calYear++;}
+  if(drpState.calMonth<0){drpState.calMonth=11;drpState.calYear--;}
+  renderDRPCal();
+}
+
+function renderDRPCal(){
+  var yr=drpState.calYear,mo=drpState.calMonth;
+  document.getElementById('drp-month-lbl').textContent=MONTH_FULL[mo]+' '+yr;
+  var grid=document.getElementById('drp-grid');
+  grid.innerHTML='';
+  ['SU','MO','TU','WE','TH','FR','SA'].forEach(function(d){var el=document.createElement('div');el.className='drp-dow';el.textContent=d;grid.appendChild(el);});
+  var first=new Date(yr,mo,1).getDay();
+  var days=new Date(yr,mo+1,0).getDate();
+  var today=drpToday();
+  for(var i=0;i<first;i++){var emp=document.createElement('div');emp.className='drp-day drp-day-empty';emp.textContent='·';grid.appendChild(emp);}
+  for(var d=1;d<=days;d++){
+    var el=document.createElement('div');
+    var thisDate=new Date(yr,mo,d);
+    var isFuture=thisDate>today;
+    el.className='drp-day'+(isFuture?' drp-day-future':'');
+    el.textContent=d;
+    var ps=drpState.pendStart,pe=drpState.pendEnd;
+    if(ps&&drpSameDay(thisDate,ps))el.classList.add('drp-day-start');
+    if(pe&&drpSameDay(thisDate,pe))el.classList.add('drp-day-end');
+    if(ps&&pe&&thisDate>ps&&thisDate<pe)el.classList.add('drp-day-in-range');
+    if(!isFuture){(function(dt){el.addEventListener('click',function(){pickDay(dt);});})(thisDate);}
+    grid.appendChild(el);
+  }
+}
+
+function pickDay(dt){
+  if(drpState.picking===0||drpState.picking===2){drpState.pendStart=dt;drpState.pendEnd=null;drpState.picking=1;}
+  else{
+    if(dt<drpState.pendStart){drpState.pendEnd=drpState.pendStart;drpState.pendStart=dt;}
+    else{drpState.pendEnd=dt;}
+    drpState.picking=2;
+  }
+  updateDRPSelDisplay();renderDRPCal();
+}
+
+function updateDRPSelDisplay(){
+  var s=drpState.pendStart,e=drpState.pendEnd;
+  var disp='';
+  if(s&&e)disp=drpFmt(s)+' → '+drpFmt(e);
+  else if(s)disp=drpFmt(s)+' → ?';
+  else if(drpState.mode==='alltime')disp='All time';
+  document.getElementById('drp-sel-display').textContent=disp;
+}
+
+function applyDRP(){
+  drpState.start=drpState.pendStart;
+  drpState.end=drpState.pendEnd;
+  var modeLabels={today:'Today',yesterday:'Yesterday',last7:'Last 7 days',last30:'Last 30 days',thismonth:'This month',lastmonth:'Last month',last3months:'Last 3 months',last6months:'Last 6 months',thisyear:'This year',alltime:'All time'};
+  var lbl;
+  if(drpState.mode!=='custom'&&modeLabels[drpState.mode]){lbl=modeLabels[drpState.mode];}
+  else if(drpState.start&&drpState.end){lbl=drpFmt(drpState.start)+' → '+drpFmt(drpState.end);}
+  else{lbl='All time';}
+  document.getElementById('dr-label').textContent=lbl;
+  closeDRP();
+  applyFilters();
+}
+
+var _origApplyFilters=applyFilters;
+applyFilters=function(){
+  var ftl=document.getElementById('f-tl').value;
+  var fs=document.getElementById('f-shift').value;
+  var fn=document.getElementById('f-name').value;
+  var fot=document.getElementById('f-ot').value;
+  var ds=drpState.start,de=drpState.end;
+  filtered=raw.filter(function(r){
+    if(ftl&&rowTL(r)!==ftl)return false;
+    if(fs&&rowShift(r)!==fs)return false;
+    if(fn&&rowName(r)!==fn)return false;
+    if(fot==='yes'&&!isOT(r))return false;
+    if(fot==='no'&&isOT(r))return false;
+    if(ds||de){var rd=drpFromStr(rowDate(r));if(!rd)return false;if(ds&&rd<ds)return false;if(de&&rd>de)return false;}
+    return true;
+  });
+  renderAll();
+};
+
+var _origClearFilters=clearFilters;
+clearFilters=function(){
+  ['f-tl','f-shift','f-name','f-ot'].forEach(function(id){document.getElementById(id).value='';});
+  drpState={mode:'last30',start:null,end:null,picking:0,calYear:null,calMonth:null,pendStart:null,pendEnd:null};
+  document.getElementById('dr-label').textContent='Last 30 days';
+  applyFilters();
+};
+
+// Init: apply last30 on load
+(function(){
+  var today=drpToday();
+  var s=new Date(today);s.setDate(s.getDate()-29);
+  drpState.pendStart=s;drpState.pendEnd=new Date(today);
+  drpState.start=s;drpState.end=new Date(today);
+})();
+
 loadData();
 </script>
 <div class="slide-overlay" id="slide-overlay" onclick="closePanel()"></div><div class="slide-panel" id="slide-panel"><div class="slide-header"><div><div class="slide-title" id="panel-title">-</div><div class="slide-sub">Month-on-month trend</div></div><div class="slide-close" onclick="closePanel()">x</div></div><div class="slide-body"><div class="slide-stats" id="panel-stats"></div><div class="slide-chart-wrap"><canvas id="panel-chart"></canvas></div></div></div></body>
