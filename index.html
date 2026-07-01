@@ -780,7 +780,7 @@ mkChart('empChart',{type:'bar',data:{labels:show.map(function(e){return e.name;}
 }
 
 
-var _sc=null,_sd=1;
+var _sc='work',_sd=-1;
 function sortEmp(col){
   if(_sc===col){_sd*=-1;}else{_sc=col;_sd=-1;}
   document.querySelectorAll(".sort-th").forEach(function(t){t.classList.remove("asc","desc");if(t.dataset.col===col)t.classList.add(_sd===1?"asc":"desc");});
@@ -800,7 +800,13 @@ function updateEmpTable(){
       qc:Math.round(sumF(rows,rowQC)),ap:Math.round(sumF(rows,rowAutopix)),
       ae:Math.round(sumF(rows,rowAutoEcom)),q3:Math.round(sumF(rows,row360QC)),
       e3:Math.round(sumF(rows,row360Edit)),vid:Math.round(sumF(rows,rowVideo))};
-  }).sort(function(a,b){return b.work-a.work;});
+  }).sort(function(a,b){
+    var av=a[_sc],bv=b[_sc];
+    if(av===undefined||av===null)av=typeof bv==='string'?'':0;
+    if(bv===undefined||bv===null)bv=typeof av==='string'?'':0;
+    if(typeof av==='string'&&typeof bv==='string')return _sd*av.localeCompare(bv);
+    return _sd*(bv-av);
+  });
   document.getElementById('emp-tbody').innerHTML=data.map(function(e,i){
     return'<tr><td><span class="rnk '+(i<3?'rnk-'+(i+1):'rnk-n')+'">'+(i+1)+'</span></td>'
       +'<td><strong>'+e.name+'</strong></td>'
