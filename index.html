@@ -207,20 +207,20 @@ footer{text-align:center;font-size:11px;color:var(--text3);font-family:'JetBrain
     <div id="drp-popup">
       <div class="drp-left">
         <div class="drp-section-lbl">Quick Select</div>
-        <div class="drp-opt" onclick="setQuick('today')">Today</div>
-        <div class="drp-opt" onclick="setQuick('yesterday')">Yesterday</div>
-        <div class="drp-opt" onclick="setQuick('last7')">Last 7 days</div>
-        <div class="drp-opt active" id="drp-q-last30" onclick="setQuick('last30')">Last 30 days</div>
+        <div class="drp-opt" onclick=\"setQuick('today',event)\">Today</div>
+        <div class="drp-opt" onclick=\"setQuick('yesterday',event)\">Yesterday</div>
+        <div class="drp-opt" onclick=\"setQuick('last7',event)\">Last 7 days</div>
+        <div class="drp-opt active" id="drp-q-last30" onclick=\"setQuick('last30',event)\">Last 30 days</div>
         <div class="drp-divider"></div>
         <div class="drp-section-lbl">Months</div>
-        <div class="drp-opt" onclick="setQuick('thismonth')">This month</div>
-        <div class="drp-opt" onclick="setQuick('lastmonth')">Last month</div>
-        <div class="drp-opt" onclick="setQuick('last3months')">Last 3 months</div>
-        <div class="drp-opt" onclick="setQuick('last6months')">Last 6 months</div>
+        <div class="drp-opt" onclick=\"setQuick('thismonth',event)\">This month</div>
+        <div class="drp-opt" onclick=\"setQuick('lastmonth',event)\">Last month</div>
+        <div class="drp-opt" onclick=\"setQuick('last3months',event)\">Last 3 months</div>
+        <div class="drp-opt" onclick=\"setQuick('last6months',event)\">Last 6 months</div>
         <div class="drp-divider"></div>
-        <div class="drp-opt" onclick="setQuick('thisyear')">This year</div>
-        <div class="drp-opt" onclick="setQuick('alltime')">All time</div>
-        <div class="drp-opt" onclick="setQuick('custom')">Custom range</div>
+        <div class="drp-opt" onclick=\"setQuick('thisyear',event)\">This year</div>
+        <div class="drp-opt" onclick=\"setQuick('alltime',event)\">All time</div>
+        <div class="drp-opt" onclick=\"setQuick('custom',event)\">Custom range</div>
       </div>
       <div class="drp-right">
         <div class="drp-cal-hdr">Custom Date Range</div>
@@ -1039,11 +1039,12 @@ document.addEventListener('click',function(e){
   if(popup&&popup.classList.contains('open')&&!popup.contains(e.target)&&!btn.contains(e.target))closeDRP();
 });
 
-function setQuick(q){
+function setQuick(q,e){
   var today=drpToday();
   var s,en;
   document.querySelectorAll('.drp-opt').forEach(function(el){el.classList.remove('active');});
-  event.target.classList.add('active');
+  var tgt=e?e.target:(event&&event.target?event.target:null);
+  if(tgt)tgt.classList.add('active');
   drpState.mode=q;
   if(q==='today'){s=new Date(today);en=new Date(today);}
   else if(q==='yesterday'){s=new Date(today);s.setDate(s.getDate()-1);en=new Date(s);}
