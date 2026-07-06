@@ -1094,9 +1094,14 @@ function renderDRPCal(){
 }
 
 function pickDay(dt){
-  if(drpState.picking===0||drpState.picking===2){drpState.pendStart=dt;drpState.pendEnd=null;drpState.picking=1;}
-  else{
+  drpState.mode='custom';
+  if(drpState.picking!==1){
+    // Start fresh selection
+    drpState.pendStart=dt;drpState.pendEnd=null;drpState.picking=1;
+  } else {
+    // Second click: set end date
     if(dt<drpState.pendStart){drpState.pendEnd=drpState.pendStart;drpState.pendStart=dt;}
+    else if(drpSameDay(dt,drpState.pendStart)){drpState.pendEnd=dt;}
     else{drpState.pendEnd=dt;}
     drpState.picking=2;
   }
