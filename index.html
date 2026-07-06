@@ -546,11 +546,16 @@ function fillSel(id,opts){
   var cur=sdVals[id]||'';
   var list=document.getElementById('sd-list-'+id);
   if(!list)return;
-  var placeholder={'f-tl':'All TLs','f-shift':'All shifts','f-name':'All employees'}[id]||'All';
-  list.innerHTML='<div class="sd-opt selected" onclick="sdSelect(''+id+'','',''+placeholder+'')">'+placeholder+'</div>'
-    +opts.map(function(o){return '<div class="sd-opt'+(o===cur?' selected':'')+'" onclick="sdSelect(''+id+'',''+o.replace(/'/g,"\'")+'',' +'''+o.replace(/'/g,"\'")+'')">'+o+'</div>';}).join('');
-  var lbl=cur?cur:placeholder;
-  document.getElementById('sd-lbl-'+id).textContent=lbl;
+  var placeholders={'f-tl':'All TLs','f-shift':'All shifts','f-name':'All employees'};
+  var placeholder=placeholders[id]||'All';
+  var html='<div class="sd-opt selected" onclick="sdSelect(\''+id+'\',\'\',\''+placeholder+'\')">'+placeholder+'</div>';
+  opts.forEach(function(o){
+    var sel=o===cur?' selected':'';
+    var escaped=o.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    html+='<div class="sd-opt'+sel+'" onclick="sdSelect(\''+id+'\',\''+escaped+'\',\''+escaped+'\')">'+o+'</div>';
+  });
+  list.innerHTML=html;
+  document.getElementById('sd-lbl-'+id).textContent=cur||placeholder;
   sdVals[id]=cur;
 }
 function clearFilters(){
