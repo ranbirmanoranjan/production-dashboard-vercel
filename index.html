@@ -1087,13 +1087,21 @@ function renderDRPCal(){
     var isFuture=thisDate>today;
     el.className='drp-day'+(isFuture?' drp-day-future':'');
     el.textContent=d;
+    el.dataset.ts=thisDate.getTime();
     var ps=drpState.pendStart,pe=drpState.pendEnd;
     if(ps&&drpSameDay(thisDate,ps))el.classList.add('drp-day-start');
     if(pe&&drpSameDay(thisDate,pe))el.classList.add('drp-day-end');
     if(ps&&pe&&thisDate>ps&&thisDate<pe)el.classList.add('drp-day-in-range');
-    if(!isFuture){(function(dt){el.addEventListener('click',function(){pickDay(dt);});})(thisDate);}
     grid.appendChild(el);
   }
+  // Use event delegation — one listener on grid, survives re-renders
+  grid._drpHandler && grid.removeEventListener('click', grid._drpHandler);
+  grid._drpHandler = function(e){
+    var day=e.target.closest('.drp-day');
+    if(!day||day.classList.contains('drp-day-empty')||day.classList.contains('drp-day-future')||!day.dataset.ts)return;
+    pickDay(new Date(parseInt(day.dataset.ts)));
+  };
+  grid.addEventListener('click', grid._drpHandler);
 }
 
 function pickDay(dt){
