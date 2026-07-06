@@ -702,7 +702,7 @@ function updateTrend(){
       interaction:{mode:'index',intersect:false},
       plugins:{
         legend:{display:false},
-        datalabels:{display:dtShowValues,anchor:'end',align:isCurve?'top':'end',clamp:true,clip:false,color:isDark()?'#ffffff':'#222222',font:{size:10,weight:'bold'},formatter:function(v){return v?String(v):''}},
+        datalabels:{display:dtShowValues,anchor:'end',align:isCurve?'top':'end',clamp:true,clip:false,rotation:isCurve?0:-90,color:isDark()?'#ffffff':'#222222',font:{size:10,weight:'bold'},formatter:function(v){return v?String(v):''}},
         tooltip:{
           enabled:false,
           external:function(ctx){
