@@ -567,12 +567,14 @@ function applyFilters(){
   var fs=(sdVals['f-shift']||'');
   var fn=(sdVals['f-name']||'');
   var fot=(sdVals['f-ot']||'');
+  var ds=drpState.start, de=drpState.end;
   filtered=raw.filter(function(r){
     if(ftl&&rowTL(r)!==ftl)return false;
     if(fs&&rowShift(r)!==fs)return false;
     if(fn&&rowName(r)!==fn)return false;
     if(fot==='yes'&&!isOT(r))return false;
     if(fot==='no'&&isOT(r))return false;
+    if(ds||de){var rd=drpFromStr(rowDate(r));if(!rd)return false;if(ds&&rd<ds)return false;if(de&&rd>de)return false;}
     return true;
   });
   renderAll();
@@ -1131,32 +1133,7 @@ function applyDRP(){
   applyFilters();
 }
 
-var _origApplyFilters=applyFilters;
-applyFilters=function(){
-  var ftl=(sdVals['f-tl']||'');
-  var fs=(sdVals['f-shift']||'');
-  var fn=(sdVals['f-name']||'');
-  var fot=(sdVals['f-ot']||'');
-  var ds=drpState.start,de=drpState.end;
-  filtered=raw.filter(function(r){
-    if(ftl&&rowTL(r)!==ftl)return false;
-    if(fs&&rowShift(r)!==fs)return false;
-    if(fn&&rowName(r)!==fn)return false;
-    if(fot==='yes'&&!isOT(r))return false;
-    if(fot==='no'&&isOT(r))return false;
-    if(ds||de){var rd=drpFromStr(rowDate(r));if(!rd)return false;if(ds&&rd<ds)return false;if(de&&rd>de)return false;}
-    return true;
-  });
-  renderAll();
-};
 
-var _origClearFilters=clearFilters;
-clearFilters=function(){
-  ['f-tl','f-shift','f-name','f-ot'].forEach(function(id){document.getElementById(id).value='';});
-  drpState={mode:'last30',start:null,end:null,picking:0,calYear:null,calMonth:null,pendStart:null,pendEnd:null};
-  document.getElementById('dr-label').textContent='Last 30 days';
-  applyFilters();
-};
 
 // Init: apply last30 on load
 (function(){
