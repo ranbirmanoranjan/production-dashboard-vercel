@@ -350,13 +350,13 @@ footer{text-align:center;font-size:11px;color:var(--text3);font-family:'JetBrain
   <div class="tbl-scroll"><table>
     <thead><tr>
       <th>#</th><th class="sort-th" data-col="name" onclick="sortEmp('name')">Name <span class="si"></span></th><th class="sort-th" data-col="empId" onclick="sortEmp('empId')">EMP ID <span class="si"></span></th><th class="sort-th" data-col="tl" onclick="sortEmp('tl')">Shift TL <span class="si"></span></th><th class="sort-th" data-col="sh" onclick="sortEmp('sh')">Shift <span class="si"></span></th>
-      <th class="r sort-th" data-col="days" onclick="sortEmp('days')">Total Days <span class="si"></span></th><th class="r sort-th" data-col="work" onclick="sortEmp('work')">Working Mins <span class="si"></span></th><th class="r sort-th" data-col="avg" onclick="sortEmp('avg')">Avg/day <span class="si"></span></th>
+      <th class="r sort-th" data-col="aging" onclick="sortEmp('aging')">Aging <span class="si"></span></th><th class="r sort-th" data-col="days" onclick="sortEmp('days')">Total Days <span class="si"></span></th><th class="r sort-th" data-col="work" onclick="sortEmp('work')">Working Mins <span class="si"></span></th><th class="r sort-th" data-col="avg" onclick="sortEmp('avg')">Avg/day <span class="si"></span></th>
       <th class="r sort-th" data-col="ot" onclick="sortEmp('ot')">OT Mins <span class="si"></span></th><th class="r sort-th" data-col="otDays" onclick="sortEmp('otDays')">OT Days <span class="si"></span></th><th class="r sort-th" data-col="otH" onclick="sortEmp('otH')">OT (hrs) <span class="si"></span></th>
       <th class="r sort-th" data-col="extra" onclick="sortEmp('extra')">Extra Mins <span class="si"></span></th><th class="r sort-th" data-col="actMins" onclick="sortEmp('actMins')">Actual Mins <span class="si"></span></th>
       <th class="r sort-th" data-col="qc" onclick="sortEmp('qc')">QC <span class="si"></span></th><th class="r sort-th" data-col="ap" onclick="sortEmp('ap')">Autopix <span class="si"></span></th><th class="r sort-th" data-col="ae" onclick="sortEmp('ae')">Auto/Ecom <span class="si"></span></th>
       <th class="r sort-th" data-col="q3" onclick="sortEmp('q3')">360 QC <span class="si"></span></th><th class="r sort-th" data-col="e3" onclick="sortEmp('e3')">360 Edit <span class="si"></span></th><th class="r sort-th" data-col="vid" onclick="sortEmp('vid')">Video <span class="si"></span></th>
     </tr></thead>
-    <tbody id="emp-tbody"><tr><td colspan="19" class="loading-overlay">Loading…</td></tr></tbody>
+    <tbody id="emp-tbody"><tr><td colspan="20" class="loading-overlay">Loading…</td></tr></tbody>
   </table></div>
 </div>
 
@@ -394,6 +394,8 @@ var GID='1309836775';
 var BASE='https://docs.google.com/spreadsheets/d/'+SHEET_ID;
 // Uses gviz JSON format - returns properly typed data, no CSV comma-splitting issues
 var JSON_URL=BASE+'/gviz/tq?tqx=out:json&gid='+GID;
+var DOJ_URL=BASE+'/gviz/tq?tqx=out:json&sheet=EMP%20IDS%20as%20per%20IT%20sheet';
+var dojMap={};
 
 // ── STATE ──────────────────────────────────────────────────────────────────
 var raw=[],filtered=[],charts={},trendM='work',empM='work';
@@ -506,6 +508,55 @@ function parseGvizJSON(txt){
 }
 
 // ── LOAD DATA ──────────────────────────────────────────────────────────────
+function fetchDOJ(){
+  fetch(DOJ_URL)
+    .then(function(r){return r.text();})
+    .then(function(txt){
+      var jsonStr=txt.substring(txt.indexOf('{'),txt.lastIndexOf('}')+1);
+      var resp=JSON.parse(jsonStr);
+      var cols=resp.table.cols.map(function(c){return (c.label||'').trim();});
+      var idCol=cols.indexOf('EMP_ID');
+      var dojCol=cols.indexOf('DOJ');
+      if(idCol<0||dojCol<0){console.warn('DOJ sheet cols not found',cols);return;}
+      resp.table.rows.forEach(function(row){
+        var idCell=row.c[idCol];
+        var dojCell=row.c[dojCol];
+        if(!idCell||!idCell.v||!dojCell||!dojCell.v)return;
+        var empId=String(idCell.v).trim();
+        // gviz returns dates as "Date(YYYY,M,D)" or formatted string
+        var doj=dojCell.v;
+        var dt=null;
+        if(typeof doj==='string'&&doj.indexOf('Date(')===0){
+          var parts=doj.replace('Date(','').replace(')','').split(',');
+          dt=new Date(parseInt(parts[0]),parseInt(parts[1]),parseInt(parts[2]));
+        } else if(dojCell.f){
+          // Use formatted value e.g. "3-Nov-2025"
+          dt=new Date(dojCell.f);
+        }
+        if(dt&&!isNaN(dt))dojMap[empId]=dt;
+      });
+      console.log('DOJ map loaded:',Object.keys(dojMap).length,'entries');
+    })
+    .catch(function(e){console.warn('DOJ fetch failed:',e);});
+}
+
+function calcAging(doj){
+  if(!doj)return null;
+  var now=new Date();
+  var months=(now.getFullYear()-doj.getFullYear())*12+(now.getMonth()-doj.getMonth());
+  if(now.getDate()<doj.getDate())months--;
+  return Math.max(0,months);
+}
+
+function fmtAging(m){
+  if(m===null||m===undefined)return '—';
+  if(m<1)return '<1m';
+  if(m<12)return m+'m';
+  var yr=Math.floor(m/12);
+  var mo=m%12;
+  return yr+'y'+(mo?(' '+mo+'m'):'');
+}
+
 function loadData(){
   var icon=document.getElementById('refresh-icon');
   icon.classList.add('spinning');
@@ -522,6 +573,7 @@ function loadData(){
       raw=data;
       icon.classList.remove('spinning');
       document.getElementById('last-ref').textContent='Updated '+new Date().toLocaleTimeString();
+      fetchDOJ();
       populateFilters();
       applyFilters();
     })
@@ -848,7 +900,8 @@ function updateEmpTable(){
     var rows=e[1];var wkR=rows.filter(function(r){return rowTotNoOT(r)>0;});var work=Math.round(sumF(wkR,rowTotNoOT)*10)/10;
     var ot=Math.round(sumF(rows,rowOTMins)*10)/10;
     var otH=Math.round(sumF(rows,rowOTHrs)*10)/10;
-    return{name:e[0],empId:rowEmpID(rows[0]),tl:rowTL(rows[0]),sh:rowShift(rows[0]),
+    var empIdKey=rowEmpID(rows[0]);var doj=dojMap[empIdKey]||null;
+    return{name:e[0],empId:empIdKey,tl:rowTL(rows[0]),sh:rowShift(rows[0]),doj:doj,aging:calcAging(doj),
       days:rows.length,work:work,avg:wkR.length?Math.round(work/wkR.length*10)/10:0,
       ot:ot,otH:otH,otDays:rows.filter(isOT).length,
       extra:Math.round(sumF(rows,rowExtra)*10)/10,
@@ -868,7 +921,7 @@ function updateEmpTable(){
       +'<td><strong>'+e.name+'</strong></td>'
       +'<td class="mono" style="color:var(--text3)">'+e.empId+'</td>'
       +'<td>'+e.tl+'</td><td>'+e.sh+'</td>'
-      +'<td class="r mono">'+e.days+'</td>'
+      +'<td class="r mono" title="'+(e.doj?e.doj.toLocaleDateString():'No DOJ')+'">'+fmtAging(e.aging)+'</td>'+'<td class="r mono">'+e.days+'</td>'
       +'<td class="r mono"><strong>'+fmtK(e.work)+'</strong></td>'
       +'<td class="r mono">'+e.avg+'</td>'
       +'<td class="r mono" style="color:'+(e.ot>0?'#f59e0b':'var(--text3)')+'">'+fmtK(e.ot)+'</td>'
