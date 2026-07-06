@@ -1097,6 +1097,7 @@ function renderDRPCal(){
   // Use event delegation — one listener on grid, survives re-renders
   grid._drpHandler && grid.removeEventListener('click', grid._drpHandler);
   grid._drpHandler = function(e){
+    e.stopPropagation();
     var day=e.target.closest('.drp-day');
     if(!day||day.classList.contains('drp-day-empty')||day.classList.contains('drp-day-future')||!day.dataset.ts)return;
     pickDay(new Date(parseInt(day.dataset.ts)));
