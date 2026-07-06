@@ -110,6 +110,23 @@ tbody tr:hover td{background:var(--table-hover)}
 .mono{font-family:'JetBrains Mono',monospace;font-size:11px}
 .loading-overlay{text-align:center;padding:2.5rem;color:var(--text3);font-size:12px;font-family:'JetBrains Mono',monospace}
 footer{text-align:center;font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:1.5rem;padding:1.25rem;border-top:1px solid var(--border);letter-spacing:.02em}
+/* ── SEARCHABLE DROPDOWNS ─────────────────────────────────────────────────── */
+.sd-wrap{position:relative;}
+.sd-btn{padding:7px 28px 7px 10px;border:1px solid var(--border);border-radius:var(--rad);background:var(--select-bg);color:var(--text);font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;text-align:left;width:100%;display:flex;align-items:center;white-space:nowrap;overflow:hidden;transition:border-color .15s;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23667eea' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;}
+.sd-btn:focus{outline:none;border-color:#667eea;box-shadow:0 0 0 3px rgba(102,126,234,0.15);}
+.sd-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.sd-popup{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:998;background:var(--card);border:1px solid var(--border2);border-radius:var(--rad-lg);box-shadow:0 8px 24px rgba(0,0,0,0.22);min-width:180px;width:max-content;max-width:280px;}
+.sd-popup.open{display:block;}
+.sd-search{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--border);}
+.sd-search input{flex:1;border:none;background:transparent;color:var(--text);font-size:12px;font-family:'Inter',sans-serif;outline:none;}
+.sd-search input::placeholder{color:var(--text3);}
+.sd-list{max-height:220px;overflow-y:auto;}
+.sd-opt{padding:7px 12px;font-size:12px;color:var(--text2);cursor:pointer;transition:background .1s;white-space:nowrap;}
+.sd-opt:hover{background:rgba(102,126,234,0.12);color:var(--text);}
+.sd-opt.selected{background:rgba(102,126,234,0.18);color:#667eea;font-weight:600;}
+.sd-opt.hidden{display:none;}
+.sd-empty{padding:10px 12px;font-size:12px;color:var(--text3);font-style:italic;}
+
 /* ── DATE RANGE PICKER ──────────────────────────────────── */
 #drp-popup{position:absolute;top:calc(100% + 6px);left:0;z-index:999;background:var(--card);border:1px solid var(--border2);border-radius:var(--rad-lg);box-shadow:0 8px 32px rgba(0,0,0,0.28);display:none;min-width:560px;flex-direction:row;overflow:hidden}
 #drp-popup.open{display:flex}
@@ -223,11 +240,38 @@ footer{text-align:center;font-size:11px;color:var(--text3);font-family:'JetBrain
     </div>
   </div>
   <div class="filter-divider"></div>
-  <div class="filter-group"><label>Shift TL</label><select id="f-tl" onchange="applyFilters()"><option value="">All TLs</option></select></div>
-  <div class="filter-group"><label>Shift</label><select id="f-shift" onchange="applyFilters()"><option value="">All shifts</option></select></div>
+  <div class="filter-group"><label>Shift TL</label><div class="sd-wrap" id="sd-wrap-f-tl">
+    <button class="sd-btn" id="sd-btn-f-tl" onclick="sdToggle('f-tl',event)"><span id="sd-lbl-f-tl">All TLs</span></button>
+    <div class="sd-popup" id="sd-pop-f-tl">
+      <div class="sd-search"><i class="ti ti-search" style="font-size:12px;color:var(--text3)"></i><input type="text" placeholder="Search..." oninput="sdSearch('f-tl',this.value)" id="sd-inp-f-tl"></div>
+      <div class="sd-list" id="sd-list-f-tl"></div>
+    </div>
+  </div></div>
+  <div class="filter-group"><label>Shift</label><div class="sd-wrap" id="sd-wrap-f-shift">
+    <button class="sd-btn" id="sd-btn-f-shift" onclick="sdToggle('f-shift',event)"><span id="sd-lbl-f-shift">All shifts</span></button>
+    <div class="sd-popup" id="sd-pop-f-shift">
+      <div class="sd-search"><i class="ti ti-search" style="font-size:12px;color:var(--text3)"></i><input type="text" placeholder="Search..." oninput="sdSearch('f-shift',this.value)" id="sd-inp-f-shift"></div>
+      <div class="sd-list" id="sd-list-f-shift"></div>
+    </div>
+  </div></div>
   <div class="filter-divider"></div>
-  <div class="filter-group"><label>Employee</label><select id="f-name" onchange="applyFilters()"><option value="">All employees</option></select></div>
-  <div class="filter-group"><label>OT</label><select id="f-ot" onchange="applyFilters()"><option value="">All</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+  <div class="filter-group"><label>Employee</label><div class="sd-wrap" id="sd-wrap-f-name">
+    <button class="sd-btn" id="sd-btn-f-name" onclick="sdToggle('f-name',event)"><span id="sd-lbl-f-name">All employees</span></button>
+    <div class="sd-popup" id="sd-pop-f-name">
+      <div class="sd-search"><i class="ti ti-search" style="font-size:12px;color:var(--text3)"></i><input type="text" placeholder="Search..." oninput="sdSearch('f-name',this.value)" id="sd-inp-f-name"></div>
+      <div class="sd-list" id="sd-list-f-name"></div>
+    </div>
+  </div></div>
+  <div class="filter-group"><label>OT</label><div class="sd-wrap" id="sd-wrap-f-ot">
+    <button class="sd-btn" id="sd-btn-f-ot" onclick="sdToggle('f-ot',event)"><span id="sd-lbl-f-ot">All</span></button>
+    <div class="sd-popup" id="sd-pop-f-ot">
+      <div class="sd-list" id="sd-list-f-ot">
+        <div class="sd-opt selected" onclick="sdSelect('f-ot','','All')">All</div>
+        <div class="sd-opt" onclick="sdSelect('f-ot','yes','Yes')">Yes</div>
+        <div class="sd-opt" onclick="sdSelect('f-ot','no','No')">No</div>
+      </div>
+    </div>
+  </div></div>
   <div class="filter-divider"></div>
   <button class="clear-btn" onclick="clearFilters()"><i class="ti ti-x" style="font-size:11px"></i> Clear</button>
 </div>
@@ -499,20 +543,25 @@ function populateFilters(){
   fillSel('f-name',uniq(rowName));
 }
 function fillSel(id,opts){
-  var s=document.getElementById(id);var cur=s.value;
-  while(s.options.length>1)s.remove(1);
-  opts.forEach(function(o){s.appendChild(new Option(o,o));});
-  if(opts.indexOf(cur)>=0)s.value=cur;
+  var cur=sdVals[id]||'';
+  var list=document.getElementById('sd-list-'+id);
+  if(!list)return;
+  var placeholder={'f-tl':'All TLs','f-shift':'All shifts','f-name':'All employees'}[id]||'All';
+  list.innerHTML='<div class="sd-opt selected" onclick="sdSelect(''+id+'','',''+placeholder+'')">'+placeholder+'</div>'
+    +opts.map(function(o){return '<div class="sd-opt'+(o===cur?' selected':'')+'" onclick="sdSelect(''+id+'',''+o.replace(/'/g,"\'")+'',' +'''+o.replace(/'/g,"\'")+'')">'+o+'</div>';}).join('');
+  var lbl=cur?cur:placeholder;
+  document.getElementById('sd-lbl-'+id).textContent=lbl;
+  sdVals[id]=cur;
 }
 function clearFilters(){
-  ['f-tl','f-shift','f-name','f-ot'].forEach(function(id){document.getElementById(id).value='';}); // f-month replaced by DRP
+  ['f-tl','f-shift','f-name','f-ot'].forEach(function(id){sdVals[id]='';var placeholder={'f-tl':'All TLs','f-shift':'All shifts','f-name':'All employees','f-ot':'All'}[id];document.getElementById('sd-lbl-'+id).textContent=placeholder;document.querySelectorAll('#sd-list-'+id+' .sd-opt').forEach(function(o){o.classList.toggle('selected',o.textContent===placeholder);});});
   applyFilters();
 }
 function applyFilters(){
-  var ftl=document.getElementById('f-tl').value;
-  var fs=document.getElementById('f-shift').value;
-  var fn=document.getElementById('f-name').value;
-  var fot=document.getElementById('f-ot').value;
+  var ftl=(sdVals['f-tl']||'');
+  var fs=(sdVals['f-shift']||'');
+  var fn=(sdVals['f-name']||'');
+  var fot=(sdVals['f-ot']||'');
   filtered=raw.filter(function(r){
     if(ftl&&rowTL(r)!==ftl)return false;
     if(fs&&rowShift(r)!==fs)return false;
@@ -862,9 +911,9 @@ function openPanel(el){
   var m=_mx[mid];
   if(!m)return;
   document.getElementById('panel-title').textContent=m.label;
-  var _ftl=document.getElementById('f-tl').value;
-  var _fs=document.getElementById('f-shift').value;
-  var _fn=document.getElementById('f-name').value;
+  var _ftl=(sdVals['f-tl']||'');
+  var _fs=(sdVals['f-shift']||'');
+  var _fn=(sdVals['f-name']||'');
   var _pr=raw.filter(function(r){
     if(_ftl&&rowTL(r)!==_ftl)return false;
     if(_fs&&rowShift(r)!==_fs)return false;
@@ -909,6 +958,55 @@ function closePanel(){
 Chart.defaults.font.family="'JetBrains Mono',monospace";
 Chart.defaults.color=textColor();
 Chart.defaults.borderColor=gridColor();
+// ── SEARCHABLE DROPDOWNS JS ──────────────────────────────────────────────────
+var sdVals={'f-tl':'','f-shift':'','f-name':'','f-ot':''};
+
+function sdToggle(id,e){
+  e.stopPropagation();
+  var pop=document.getElementById('sd-pop-'+id);
+  var isOpen=pop.classList.contains('open');
+  // close all
+  document.querySelectorAll('.sd-popup.open').forEach(function(p){p.classList.remove('open');});
+  if(!isOpen){
+    pop.classList.add('open');
+    var inp=document.getElementById('sd-inp-'+id);
+    if(inp){inp.value='';sdSearch(id,'');inp.focus();}
+  }
+}
+
+function sdSearch(id,q){
+  var list=document.getElementById('sd-list-'+id);
+  var opts=list.querySelectorAll('.sd-opt');
+  var found=0;
+  opts.forEach(function(o){
+    var match=o.textContent.toLowerCase().indexOf(q.toLowerCase())>=0;
+    o.classList.toggle('hidden',!match);
+    if(match)found++;
+  });
+  var emp=list.querySelector('.sd-empty');
+  if(!found){
+    if(!emp){var d=document.createElement('div');d.className='sd-empty';d.textContent='No results';list.appendChild(d);}
+  } else {
+    if(emp)emp.remove();
+  }
+}
+
+function sdSelect(id,val,label){
+  sdVals[id]=val;
+  document.getElementById('sd-lbl-'+id).textContent=label||(val||({'f-tl':'All TLs','f-shift':'All shifts','f-name':'All employees','f-ot':'All'}[id]));
+  document.querySelectorAll('#sd-list-'+id+' .sd-opt').forEach(function(o){o.classList.toggle('selected',o.textContent===(label||val));});
+  document.getElementById('sd-pop-'+id).classList.remove('open');
+  applyFilters();
+}
+
+document.addEventListener('click',function(e){
+  document.querySelectorAll('.sd-popup.open').forEach(function(p){
+    var wrap=p.closest('.sd-wrap');
+    if(wrap&&!wrap.contains(e.target))p.classList.remove('open');
+  });
+});
+
+
 // ── DATE RANGE PICKER ────────────────────────────────────────────────────────
 var drpState={mode:'last30',start:null,end:null,picking:0,calYear:null,calMonth:null,pendStart:null,pendEnd:null};
 var MONTH_FULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -1024,10 +1122,10 @@ function applyDRP(){
 
 var _origApplyFilters=applyFilters;
 applyFilters=function(){
-  var ftl=document.getElementById('f-tl').value;
-  var fs=document.getElementById('f-shift').value;
-  var fn=document.getElementById('f-name').value;
-  var fot=document.getElementById('f-ot').value;
+  var ftl=(sdVals['f-tl']||'');
+  var fs=(sdVals['f-shift']||'');
+  var fn=(sdVals['f-name']||'');
+  var fot=(sdVals['f-ot']||'');
   var ds=drpState.start,de=drpState.end;
   filtered=raw.filter(function(r){
     if(ftl&&rowTL(r)!==ftl)return false;
