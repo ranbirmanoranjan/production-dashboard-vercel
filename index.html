@@ -282,7 +282,7 @@ footer{text-align:center;font-size:11px;color:var(--text3);font-family:'JetBrain
   <div class="kpi" onclick="openPanel(this)"><div class="kpi-glow" style="background:var(--grad)"></div><div class="lbl">Total Days</div><div class="val" id="k-mandays" data-metric="k-mandays">-</div><div class="sub">total records</div></div>
   <div class="kpi" onclick="openPanel(this)"><div class="kpi-glow" style="background:var(--grad4)"></div><div class="lbl">Total Working Mins (w/o OT)</div><div class="val" id="k-actual" data-metric="k-actual">-</div><div class="sub" id="k-actual-sub"></div></div>
   <div class="kpi" onclick="openPanel(this)"><div class="kpi-glow" style="background:var(--grad4)"></div><div class="lbl">Avg Mins / Day</div><div class="val" id="k-avg" data-metric="k-avg">-</div><div class="sub">avg of working days only</div></div>
-  <div class="kpi" onclick="openPanel(this)"><div class="kpi-glow" style="background:var(--grad3)"></div><div class="lbl">Total Actual Mins</div><div class="val" id="k-total" data-metric="k-total">-</div><div class="sub">incl. OT</div></div>
+  <div class="kpi" onclick="openPanel(this)"><div class="kpi-glow" style="background:var(--grad3)"></div><div class="lbl">Avg Actual Working Mins / Day</div><div class="val" id="k-total" data-metric="k-total">-</div><div class="sub" id="k-total-sub">avg of working days</div></div>
   <div class="kpi" onclick="openPanel(this)"><div class="kpi-glow" style="background:linear-gradient(135deg,#43e97b,#38f9d7)"></div><div class="lbl">Extra Mins Added</div><div class="val" id="k-extra" data-metric="k-extra">-</div><div class="sub">total across all records</div></div>
 </div>
 <!-- ROW 2: OT -->
@@ -441,6 +441,7 @@ function rowTotNoOT(r) {return gn(r,'Total working Mins. without OT');}
 function rowOTMins(r)  {return gn(r,'OT Mins.');}
 function rowOTHrs(r)   {return gn(r,'OT');}
 function rowActMins(r) {return gn(r,'Actual Mins.');}
+function rowActWorkMins(r) {return gn(r,'Actual Working Mins.');}
 
 // Attendance — from dedicated boolean columns (verified: "P","WO","Leave","Holiday","Absent")
 function isPresent(r)    {return gc(r,'P')==='P';}
@@ -693,7 +694,10 @@ function updateKPIs(){
   setText('k-ot-sub','Total OT: '+otHrsTotal+' hrs');
   setText('k-otdays',otRows.length.toLocaleString());
   setText('k-otpct',n?Math.round(otRows.length/n*100)+'% of records':'');
-  setText('k-total',fmtK(totalActMins));
+  var actRows=filtered.filter(function(r){return rowActWorkMins(r)>0;});
+  var totalActWork=sumF(filtered,rowActWorkMins);
+  setText('k-total',actRows.length?(Math.round(totalActWork/actRows.length*10)/10).toLocaleString():'—');
+  setText('k-total-sub',actRows.length.toLocaleString()+' working days');
   setText('k-absent',absRows.length.toLocaleString());
   setText('k-absent-sub',absRows.length?uniqEmp(absRows)+' employees':'');
   // Row 2
@@ -946,7 +950,7 @@ var _mx={
   'k-mandays':{label:'Total Days',fn:function(r){return r.length;},fmt:function(v){return String(v);}},
   'k-actual':{label:'Total Working Mins (w/o OT)',fn:function(r){var w=r.filter(function(x){return rowTotNoOT(x)>0;});return Math.round(w.reduce(function(s,x){return s+rowTotNoOT(x);},0));},fmt:fmtK},
   'k-avg':{label:'Avg Mins / Day',fn:function(r){var w=r.filter(function(x){return rowTotNoOT(x)>0;});return w.length?Math.round(w.reduce(function(s,x){return s+rowTotNoOT(x);},0)/w.length*10)/10:0;},fmt:function(v){return String(v);}},
-  'k-total':{label:'Total Actual Mins',fn:function(r){return Math.round(r.reduce(function(s,x){return s+rowActMins(x);},0));},fmt:fmtK},
+  'k-total':{label:'Avg Actual Working Mins / Day',fn:function(r){var a=r.filter(function(x){return rowActWorkMins(x)>0;});var t=a.reduce(function(s,x){return s+rowActWorkMins(x);},0);return a.length?Math.round(t/a.length*10)/10:0;},fmt:function(v){return String(v);}},
   'k-extra':{label:'Extra Mins Added',fn:function(r){return Math.round(r.reduce(function(s,x){return s+rowExtra(x);},0));},fmt:fmtK},
   'k-ot':{label:'OT Mins',fn:function(r){return Math.round(r.reduce(function(s,x){return s+rowOTMins(x);},0));},fmt:fmtK},
   'k-otdays':{label:'OT Days',fn:function(r){return r.filter(isOT).length;},fmt:function(v){return String(v);}},
