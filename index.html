@@ -545,17 +545,19 @@ function calcAging(doj){
   if(!doj)return null;
   var now=new Date();
   var months=(now.getFullYear()-doj.getFullYear())*12+(now.getMonth()-doj.getMonth());
-  if(now.getDate()<doj.getDate())months--;
-  return Math.max(0,months);
+  var days=now.getDate()-doj.getDate();
+  if(days<0){
+    months--;
+    days+=new Date(now.getFullYear(),now.getMonth(),0).getDate();
+  }
+  if(months<0)return 0;
+  // months.days format: 1 month 8 days -> 1.08
+  return months+(days/100);
 }
 
 function fmtAging(m){
   if(m===null||m===undefined)return '—';
-  if(m<1)return '<1m';
-  if(m<12)return m+'m';
-  var yr=Math.floor(m/12);
-  var mo=m%12;
-  return yr+'y'+(mo?(' '+mo+'m'):'');
+  return m.toFixed(2)+'m';
 }
 
 function loadData(){
