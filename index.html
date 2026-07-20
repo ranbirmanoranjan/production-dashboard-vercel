@@ -338,12 +338,18 @@ footer{text-align:center;font-size:11px;color:var(--text3);font-family:'JetBrain
 </div>
 
 <div class="panel"><div class="panel-title"><i class="ti ti-user-circle"></i> Employee performance</div>
-  <div class="tabs" id="emp-tabs">
-    <div class="tab active" onclick="switchEmp('work',this)">Working mins</div>
-    <div class="tab" onclick="switchEmp('ot',this)">OT mins</div>
-    <div class="tab" onclick="switchEmp('avg',this)">Avg mins/day</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div class="tabs" id="emp-tabs" style="margin-bottom:0">
+      <div class="tab active" onclick="switchEmp('work',this)">Working mins</div>
+      <div class="tab" onclick="switchEmp('ot',this)">OT mins</div>
+      <div class="tab" onclick="switchEmp('avg',this)">Avg mins/day</div>
+    </div>
+    <div class="tabs" id="emp-sort-tabs" style="margin-bottom:0">
+      <div class="tab active" id="emp-sort-desc" onclick="setEmpSort(-1,this)"><i class="ti ti-sort-descending" style="font-size:12px"></i> High → Low</div>
+      <div class="tab" id="emp-sort-asc" onclick="setEmpSort(1,this)"><i class="ti ti-sort-ascending" style="font-size:12px"></i> Low → High</div>
+    </div>
   </div>
-  <div class="chart-wrap" id="emp-wrap" style="height:320px"><canvas id="empChart"></canvas></div>
+  <div class="chart-wrap" id="emp-wrap" style="height:320px;margin-top:10px"><canvas id="empChart"></canvas></div>
 </div>
 
 <div class="panel"><div class="panel-title"><i class="ti ti-table"></i> Employee summary</div>
@@ -878,6 +884,8 @@ function donutChart(id,labels,vals,colors){
 function updateShiftChart(){var grp=groupBy(filtered,rowShift);var labels=Object.keys(grp);donutChart('shiftChart',labels,labels.map(function(k){return Math.round(sumF(grp[k].filter(function(r){return rowTotNoOT(r)>0;}),rowTotNoOT));}),PAL.slice(0,labels.length));}
 function updateTaskChart(){var lbls=['QC','Autopix','Auto/Ecom','360 QC','360 Edit','Video'];var fns=[rowQC,rowAutopix,rowAutoEcom,row360QC,row360Edit,rowVideo];donutChart('taskChart',lbls,fns.map(function(fn){return Math.round(sumF(filtered,fn));}),PAL.slice(0,lbls.length));}
 
+var empSortDir=-1;
+function setEmpSort(dir,el){empSortDir=dir;document.querySelectorAll('#emp-sort-tabs .tab').forEach(function(t){t.classList.remove('active');});el.classList.add('active');updateEmpChart();}
 function updateEmpChart(){
   var grp=groupBy(filtered,rowName);
   var mFns={work:function(e){return e.work;},ot:function(e){return e.ot;},avg:function(e){return e.avg;}};
@@ -885,7 +893,7 @@ function updateEmpChart(){
   var data=Object.entries(grp).map(function(e){
     var rows=e[1];var wkR=rows.filter(function(r){return rowTotNoOT(r)>0;});var work=sumF(wkR,rowTotNoOT);
     return{name:e[0],work:work,ot:sumF(rows,rowOTMins),otHrs:Math.round(sumF(rows,rowOTHrs)*10)/10,avg:wkR.length?Math.round(work/wkR.length*10)/10:0,tasks:Math.round(sumF(rows,taskSum))};
-  }).sort(function(a,b){if(_sc){var va=a[_sc],vb=b[_sc];if(typeof va==="string")return _sd*(va.localeCompare(vb));return _sd*((vb||0)-(va||0));}return mFns[empM](b)-mFns[empM](a);});
+  }).sort(function(a,b){return empSortDir*(mFns[empM](b)-mFns[empM](a));});
   var show=data.slice(0,30);
   var h=Math.max(320,show.length*28+60);
   document.getElementById('emp-wrap').style.height=h+'px';
