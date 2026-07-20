@@ -989,7 +989,11 @@ function openPanel(el){
   var grp=groupBy(_pr,function(r){return monthLabel(rowDate(r));});
   var mos=sortMonths(Object.keys(grp));
   var vals=mos.map(function(mo){return m.fn(grp[mo]);});
-  var wdays=mos.map(function(mo){return grp[mo].filter(function(r){return rowTotNoOT(r)>0;}).length;});
+  var _totalCountMetrics=['k-wo','k-leave','k-absent'];
+  var wdays=mos.map(function(mo){
+    if(_totalCountMetrics.indexOf(mid)>=0)return grp[mo].length;
+    return grp[mo].filter(function(r){return rowTotNoOT(r)>0;}).length;
+  });
   var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals);
   var av=Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length*10)/10;
   var ps=document.getElementById('panel-stats');
