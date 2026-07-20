@@ -412,8 +412,8 @@ function pn(v){var n=parseFloat(String(v||'').replace(/,/g,'').trim());return is
 // fmtK: format number as 8.522k (3 decimal places)
 function fmtK(n){
   n=Math.round(n*10)/10;
-  if(n>=1e6) return (n/1e6).toFixed(3)+'M';
-  if(n>=1000) return (n/1000).toFixed(3)+'k';
+  if(n>=1e6) return (n/1e6).toFixed(1)+'M';
+  if(n>=1000) return (n/1000).toFixed(1)+'k';
   return n+'';
 }
 function sumF(arr,fn){return arr.reduce(function(a,r){return a+fn(r);},0);}
