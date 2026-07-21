@@ -372,7 +372,7 @@ footer{text-align:center;font-size:11px;color:var(--text3);font-family:'JetBrain
       <th>#</th>
       <th class="sort-th" data-col="name" onclick="sortOTemp('name')">Name <span class="si"></span></th>
       <th class="sort-th" data-col="tl" onclick="sortOTemp('tl')">Shift TL <span class="si"></span></th>
-      <th class="r sort-th" data-col="otCount" onclick="sortOTemp('otCount')">Total OT Count <span class="si"></span></th>
+      <th class="r sort-th" data-col="otCount" onclick="sortOTemp('otCount')">Total OT <span class="si"></span></th>
     </tr></thead>
     <tbody id="otemp-tbody"><tr><td colspan="4" class="loading-overlay">Loading…</td></tr></tbody>
   </table></div>
@@ -924,7 +924,7 @@ function updateOTempTable(){
   var grp=groupBy(filtered,rowName);
   var data=Object.entries(grp).map(function(e){
     var rows=e[1];
-    return{name:e[0],tl:rowTL(rows[0]),otCount:rows.filter(isOT).length};
+    return{name:e[0],tl:rowTL(rows[0]),otCount:Math.round(sumF(rows,rowOTHrs)*10)/10};
   }).filter(function(e){return e.otCount>0;});
   data.sort(function(a,b){
     var av=a[_osc],bv=b[_osc];
