@@ -925,7 +925,7 @@ function updateOTempTable(){
   var data=Object.entries(grp).map(function(e){
     var rows=e[1];
     return{name:e[0],tl:rowTL(rows[0]),otCount:Math.round(sumF(rows,rowOTHrs)*10)/10};
-  }).filter(function(e){return e.otCount>0;});
+  });
   data.sort(function(a,b){
     var av=a[_osc],bv=b[_osc];
     if(typeof av==='string')return _osd*av.localeCompare(bv);
