@@ -366,6 +366,18 @@ footer{text-align:center;font-size:11px;color:var(--text3);font-family:'JetBrain
   </table></div>
 </div>
 
+<div class="panel"><div class="panel-title"><i class="ti ti-moon-stars"></i> Total OT by Employee</div>
+  <div class="tbl-scroll" style="max-height:480px"><table>
+    <thead><tr>
+      <th>#</th>
+      <th class="sort-th" data-col="name" onclick="sortOTemp('name')">Name <span class="si"></span></th>
+      <th class="sort-th" data-col="tl" onclick="sortOTemp('tl')">Shift TL <span class="si"></span></th>
+      <th class="r sort-th" data-col="otCount" onclick="sortOTemp('otCount')">Total OT Count <span class="si"></span></th>
+    </tr></thead>
+    <tbody id="otemp-tbody"><tr><td colspan="4" class="loading-overlay">Loading…</td></tr></tbody>
+  </table></div>
+</div>
+
 
 
 <footer>Powered by <strong style="background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">spyne.ai</strong> &nbsp;·&nbsp; Live · Google Sheets · Apr '26 Onwards</footer>
@@ -650,7 +662,7 @@ function groupBy(arr,fn){
 function renderAll(){
   updateDateRange();updateKPIs();updateHighlights();
   updateTrend();updateTLChart();updateShiftChart();updateTaskChart();
-  updateEmpChart();updateEmpTable();
+  updateEmpChart();updateEmpTable();updateOTempTable();
 }
 function setText(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
 
@@ -903,6 +915,31 @@ mkChart('empChart',{type:'bar',data:{labels:show.map(function(e){return e.name;}
 
 
 var _sc='work',_sd=-1;
+var _osc='otCount',_osd=-1;
+function sortOTemp(col){
+  if(_osc===col)_osd*=-1;else{_osc=col;_osd=col==='name'||col==='tl'?1:-1;}
+  updateOTempTable();
+}
+function updateOTempTable(){
+  var grp=groupBy(filtered,rowName);
+  var data=Object.entries(grp).map(function(e){
+    var rows=e[1];
+    return{name:e[0],tl:rowTL(rows[0]),otCount:rows.filter(isOT).length};
+  }).filter(function(e){return e.otCount>0;});
+  data.sort(function(a,b){
+    var av=a[_osc],bv=b[_osc];
+    if(typeof av==='string')return _osd*av.localeCompare(bv);
+    return _osd*(bv-av);
+  });
+  var tb=document.getElementById('otemp-tbody');
+  if(!data.length){tb.innerHTML='<tr><td colspan="4" class="loading-overlay">No OT records</td></tr>';return;}
+  tb.innerHTML=data.map(function(e,i){
+    return '<tr><td><span class="rnk '+(i<3?'rnk-'+(i+1):'rnk-n')+'">'+(i+1)+'</span></td>'
+      +'<td>'+e.name+'</td>'
+      +'<td>'+e.tl+'</td>'
+      +'<td class="r mono">'+e.otCount+'</td></tr>';
+  }).join('');
+}
 function sortEmp(col){
   if(_sc===col){_sd*=-1;}else{_sc=col;_sd=-1;}
   document.querySelectorAll(".sort-th").forEach(function(t){t.classList.remove("asc","desc");if(t.dataset.col===col)t.classList.add(_sd===1?"asc":"desc");});
