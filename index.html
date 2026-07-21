@@ -52,6 +52,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .refresh-btn{display:flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border2);border-radius:var(--rad);background:var(--bg3);cursor:pointer;font-size:12px;color:var(--text2);font-family:'Inter',sans-serif;transition:all .15s}
 .refresh-btn:hover{background:var(--bg4);border-color:#667eea;color:var(--text)}
 .refresh-btn i{font-size:13px}
+.dl-opt:hover{background:rgba(102,126,234,0.12);color:var(--text)!important}
 .theme-toggle{width:34px;height:34px;border-radius:var(--rad);background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;color:var(--text2);transition:all .15s;flex-shrink:0}
 .theme-toggle:hover{border-color:#667eea;color:var(--text)}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -189,6 +190,13 @@ footer{text-align:center;font-size:11px;color:var(--text3);font-family:'JetBrain
     <div class="date-range"><i class="ti ti-calendar-event"></i><span id="date-range-text">—</span></div>
     <span class="last-ref" id="last-ref"></span>
     <button class="refresh-btn" onclick="loadData()"><i class="ti ti-refresh" id="refresh-icon"></i> Refresh</button>
+    <div class="dl-wrap" style="position:relative">
+      <button class="refresh-btn" onclick="toggleDL(event)"><i class="ti ti-download"></i> Export</button>
+      <div id="dl-menu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:998;background:var(--card);border:1px solid var(--border2);border-radius:var(--rad-lg);box-shadow:0 8px 24px rgba(0,0,0,0.22);min-width:210px;overflow:hidden">
+        <div class="dl-opt" onclick="downloadCSV('emp')" style="padding:9px 14px;font-size:12px;color:var(--text2);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:8px"><i class="ti ti-table" style="font-size:13px;color:#667eea"></i> Employee Summary (CSV)</div>
+        <div class="dl-opt" onclick="downloadCSV('otemp')" style="padding:9px 14px;font-size:12px;color:var(--text2);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border)"><i class="ti ti-moon-stars" style="font-size:13px;color:#667eea"></i> Total OT by Employee (CSV)</div>
+      </div>
+    </div>
     <div class="theme-toggle" onclick="toggleTheme()" title="Toggle theme"><i class="ti ti-sun" id="theme-icon"></i></div>
   </div>
 </header>
@@ -576,6 +584,56 @@ function calcAging(doj){
 function fmtAging(m){
   if(m===null||m===undefined)return '—';
   return m.toFixed(2)+'m';
+}
+
+// ── EXPORT / DOWNLOAD ────────────────────────────────────────────────────────
+function toggleDL(e){
+  e.stopPropagation();
+  var m=document.getElementById('dl-menu');
+  m.style.display=m.style.display==='block'?'none':'block';
+}
+document.addEventListener('click',function(e){
+  var m=document.getElementById('dl-menu');
+  if(m&&m.style.display==='block'&&!e.target.closest('.dl-wrap'))m.style.display='none';
+});
+function csvCell(v){
+  if(v===null||v===undefined)v='';
+  v=String(v);
+  if(/[",\n]/.test(v))v='"'+v.replace(/"/g,'""')+'"';
+  return v;
+}
+function saveCSV(filename,rows){
+  var csv=rows.map(function(r){return r.map(csvCell).join(',');}).join('\n');
+  var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+function downloadCSV(which){
+  document.getElementById('dl-menu').style.display='none';
+  var dr=(document.getElementById('date-range-text').textContent||'').replace(/[^0-9A-Za-z-]/g,'_');
+  var grp=groupBy(filtered,rowName);
+  if(which==='emp'){
+    var header=['Name','EMP ID','Shift TL','Shift','Aging','Total Days','Working Mins','Avg/Day','OT Mins','OT Days','OT (hrs)','Extra Mins','Actual Mins','QC','Autopix','Auto/Ecom','360 QC','360 Edit','Video'];
+    var data=Object.entries(grp).map(function(e){
+      var rows=e[1];var wkR=rows.filter(function(r){return rowTotNoOT(r)>0;});var work=Math.round(sumF(wkR,rowTotNoOT)*10)/10;
+      var doj=dojMap[rowEmpID(rows[0])]||null;
+      return [e[0],rowEmpID(rows[0]),rowTL(rows[0]),rowShift(rows[0]),fmtAging(calcAging(doj)),rows.length,work,
+        wkR.length?Math.round(work/wkR.length*10)/10:0,Math.round(sumF(rows,rowOTMins)*10)/10,rows.filter(isOT).length,
+        Math.round(sumF(rows,rowOTHrs)*10)/10,Math.round(sumF(rows,rowExtra)*10)/10,Math.round(sumF(rows,rowActMins)*10)/10,
+        Math.round(sumF(rows,rowQC)),Math.round(sumF(rows,rowAutopix)),Math.round(sumF(rows,rowAutoEcom)),
+        Math.round(sumF(rows,row360QC)),Math.round(sumF(rows,row360Edit)),Math.round(sumF(rows,rowVideo))];
+    }).sort(function(a,b){return (b[6]||0)-(a[6]||0);});
+    saveCSV('Employee_Summary_'+dr+'.csv',[header].concat(data));
+  } else if(which==='otemp'){
+    var header2=['Name','Shift TL','Total OT'];
+    var data2=Object.entries(grp).map(function(e){
+      var rows=e[1];
+      return [e[0],rowTL(rows[0]),Math.round(sumF(rows,rowOTHrs)*10)/10];
+    }).sort(function(a,b){return (b[2]||0)-(a[2]||0);});
+    saveCSV('Total_OT_by_Employee_'+dr+'.csv',[header2].concat(data2));
+  }
 }
 
 function loadData(){
